@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.15.0
+    container_name: filebeat
+    user: root
+    volumes:
+      # log do Windows montado dentro do container
+      - "C:/logs/logs.log:/var/log/custom/logs.log:ro"
+      # config do filebeat
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      # necessário para acesso aos módulos internos
+      - filebeat_data:/usr/share/filebeat/data
+    depends_on:
+      - elasticsearch
+      - kibana
+    command: ["--strict.perms=false"] # evita erro de permissões no Windows
+
+volumes:
+  es_data:
+  filebeat_data:
